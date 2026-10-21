@@ -1,0 +1,40 @@
+# Runs the lanes every five minutes, with no computer of yours involved.
+#
+# Secrets this needs (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL  ·  SUPABASE_SERVICE_KEY  ·  ASX_USER_ID
+#
+# GitHub disables scheduled workflows in a repository with no activity for 60
+# days. If messages stop for no other reason, open the Actions tab and
+# re-enable this workflow.
+
+name: sweep
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: sweep
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Sweep
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ASX_USER_ID: ${{ secrets.ASX_USER_ID }}
+        run: node scripts/sweep.mjs
