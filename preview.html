@@ -1,0 +1,2031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASX Investment Tool</title>
+<style>
+/* ============================================================================
+   ASX Investment Tool — new design language.
+   Three shades of blue on near-black. Oversized numerals, hairline rules,
+   a monogram tile, and not one rounded card in the feed.
+   ========================================================================== */
+
+:root{
+  /* the surfaces, darkest to lightest */
+  --void:#070a12;
+  --shell:#0a0f1c;
+  --panel:#0e1526;
+  --panel-2:#131d33;
+  --line:#1d2942;
+  --line-2:#2b3b5c;
+
+  /* ink */
+  --ink:#e9eefb;
+  --ink-2:#a3b2d0;
+  --ink-3:#67779a;
+
+  /* the brand — three blues */
+  --blue:#3b82f6;
+  --blue-light:#60a5fa;
+  --blue-deep:#1d4ed8;
+  --blue-dim:rgba(59,130,246,.13);
+  --blue-glow:rgba(59,130,246,.30);
+
+  /* direction. semantic — never used for decoration. */
+  --long:#34d399;
+  --short:#f87171;
+  --warn:#fbbf24;
+
+  --r:10px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:
+    radial-gradient(900px 500px at 78% -12%, rgba(59,130,246,.13), transparent 62%),
+    var(--void);
+  color:var(--ink);
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input,select{
+  font:inherit;color:var(--ink);background:var(--panel-2);
+  border:1px solid var(--line-2);border-radius:8px;padding:10px 12px;width:100%;outline:none;
+}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-dim)}
+::placeholder{color:var(--ink-3)}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),
+  linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 52%,calc(100% - 13px) 52%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:36px}
+
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+
+/* ── rail ─────────────────────────────────────────────────────────────── */
+.rail{
+  background:var(--shell);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:20px 14px;position:sticky;top:0;height:100vh;
+}
+.brand{display:flex;align-items:center;gap:11px;padding:2px 8px 18px;border-bottom:1px solid var(--line)}
+.mark{
+  width:38px;height:38px;border-radius:9px;overflow:hidden;flex:0 0 auto;
+  background:linear-gradient(160deg,var(--blue-light),var(--blue) 55%,var(--blue-deep));
+  box-shadow:0 4px 14px rgba(29,78,216,.4);
+}
+.mark img{display:block;width:100%;height:100%;object-fit:cover}
+.brand-txt{display:flex;flex-direction:column;line-height:1.15}
+.brand-txt b{font-size:15px;letter-spacing:.02em}
+.brand-txt span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+
+.nav{display:flex;flex-direction:column;gap:2px;margin-top:16px;flex:1;overflow:auto}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;
+  color:var(--ink-2);text-align:left;transition:background .12s,color .12s;
+}
+.nav-item i{
+  font-style:normal;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;
+  font-size:11px;font-weight:800;border:1px solid var(--line-2);color:var(--ink-3);
+  transition:border-color .12s,color .12s,background .12s;
+}
+.nav-item span{font-size:13.5px;font-weight:600;letter-spacing:.01em}
+.nav-item:hover{background:var(--panel);color:var(--ink)}
+.nav-item.on{background:var(--blue-dim);color:var(--blue-light)}
+.nav-item.on i{
+  border-color:var(--blue);color:#fff;
+  background:linear-gradient(160deg,var(--blue-light),var(--blue-deep));
+}
+.nav-sep{height:1px;background:var(--line);margin:10px 8px}
+
+.rail-foot{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
+.pulse{display:flex;align-items:center;gap:8px;padding:0 8px}
+.pulse span{width:7px;height:7px;border-radius:50%;background:var(--ink-3);flex:0 0 auto}
+.pulse.live span{background:var(--blue-light);box-shadow:0 0 0 4px var(--blue-dim)}
+.pulse.err span{background:var(--short);box-shadow:0 0 0 4px rgba(248,113,113,.16)}
+.pulse em{font-style:normal;font-size:11px;color:var(--ink-3);letter-spacing:.05em}
+.run-btn{
+  background:linear-gradient(160deg,var(--blue-light),var(--blue) 50%,var(--blue-deep));
+  color:#fff;font-weight:800;font-size:12.5px;
+  padding:11px;border-radius:8px;letter-spacing:.02em;
+  box-shadow:0 4px 16px rgba(29,78,216,.4);
+  transition:filter .12s,transform .12s;
+}
+.run-btn:hover{filter:brightness(1.09)}
+.run-btn:active{transform:translateY(1px)}
+.run-btn:disabled{opacity:.45;cursor:progress}
+
+/* ── main ─────────────────────────────────────────────────────────────── */
+.main{padding:34px 38px 70px;max-width:1180px;min-width:0}
+.view{display:none}
+.view.on{display:block;animation:rise .18s ease}
+@keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.vhead{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;
+       padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:22px}
+h1{font-size:44px;line-height:1;margin:0 0 8px;letter-spacing:-.035em;font-weight:800}
+.sub{margin:0;color:var(--ink-2);font-size:13.5px;max-width:560px}
+.vstats{display:flex;gap:26px}
+.stat{text-align:right}
+.stat b{display:block;font-size:30px;line-height:1;letter-spacing:-.03em;
+        font-variant-numeric:tabular-nums;font-weight:800;
+        background:linear-gradient(180deg,#fff,var(--blue-light));
+        -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.stat span{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)}
+.vactions{display:flex;gap:8px}
+
+/* ── the tape ─────────────────────────────────────────────────────────────
+   Not cards. Records on a ledger: hairline rules, one line per event,
+   oversized tabular numerals, a single 2px direction edge on the left.
+   ──────────────────────────────────────────────────────────────────────── */
+.feed{display:flex;flex-direction:column;border-top:1px solid var(--line-2)}
+.rec{
+  display:grid;grid-template-columns:2px 1fr;
+  border-bottom:1px solid var(--line);position:relative;
+  transition:background .12s;
+}
+.rec:hover{background:var(--panel)}
+.rec-edge{background:transparent;grid-row:1/-1}
+.rec.long .rec-edge{background:var(--long)}
+.rec.short .rec-edge{background:var(--short)}
+.rec.wake .rec-edge{background:var(--blue-light);box-shadow:0 0 12px var(--blue-glow)}
+.rec.break .rec-edge{background:var(--long)}
+.rec.dead .rec-edge{background:var(--line-2)}
+
+.rec-body{display:grid;grid-template-columns:minmax(180px,.9fr) 2.2fr auto;
+          align-items:center;gap:24px;padding:15px 4px 15px 20px}
+.rec-id{display:flex;flex-direction:column;gap:5px;min-width:0}
+.rec-id .sym{font-size:15.5px;font-weight:800;letter-spacing:-.01em}
+.rec-id .meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pill{font-size:9px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
+      padding:2.5px 6px;border-radius:3px;border:1px solid var(--line-2);color:var(--ink-3)}
+.pill.long{color:var(--long);border-color:rgba(52,211,153,.42)}
+.pill.short{color:var(--short);border-color:rgba(248,113,113,.42)}
+.pill.wake{color:var(--blue-light);border-color:rgba(96,165,250,.5);background:var(--blue-dim)}
+.pill.break{color:var(--long);border-color:rgba(52,211,153,.42)}
+.pattern{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.rec-figs{display:flex;gap:30px;flex-wrap:wrap}
+.fig{display:flex;flex-direction:column;gap:1px}
+.fig em{font-style:normal;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.fig b{font-size:18px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.fig b.quiet{font-size:13px;color:var(--ink-2);letter-spacing:.02em;font-weight:600}
+
+.rec-end{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-right:16px}
+.rec-end .when{font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.rec-note{grid-column:2/-1;padding:0 16px 13px 20px;margin-top:-6px;
+          font-size:11.5px;color:var(--ink-3)}
+.rec-note:before{content:"↳ ";color:var(--line-2)}
+
+.empty{border:1px solid var(--line-2);border-radius:var(--r);padding:44px 20px;
+       text-align:center;color:var(--ink-3);margin-top:18px}
+.empty b{display:block;color:var(--ink-2);font-size:14px;margin-bottom:5px}
+
+/* ── lab board ────────────────────────────────────────────────────────── */
+.board{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.variant{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:15px;
+         position:relative;overflow:hidden}
+.variant:after{content:"";position:absolute;inset:0 0 auto 0;height:1px;
+               background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:.5}
+.variant h4{margin:0 0 10px;font-size:12px;letter-spacing:.06em;color:var(--ink-2);font-weight:700;
+            text-transform:uppercase;word-break:break-word}
+.variant .big{font-size:32px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.variant .meta{font-size:11px;color:var(--ink-3);margin-top:6px}
+.variant .big{min-height:38px}
+.variant .code{font:600 9px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;
+               color:var(--ink-3);opacity:.55;margin-top:10px;word-break:break-all}
+.meter{height:4px;border-radius:2px;background:var(--panel-2);margin-top:10px;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:2px;
+         background:linear-gradient(90deg,var(--blue-deep),var(--blue-light))}
+
+/* ── history ──────────────────────────────────────────────────────────── */
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;
+         margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.toolbar .cell{display:flex;flex-direction:column;gap:5px;min-width:150px}
+.toolbar .cell>span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.toolbar .cell input,.toolbar .cell select{padding:8px 11px;font-size:13px}
+.toolbar .grow{flex:1}
+.hist-count{margin-left:auto;text-align:right;font-size:11px;color:var(--ink-3);
+            letter-spacing:.04em;padding-bottom:9px}
+.hist-count b{display:block;font-size:22px;color:var(--ink);letter-spacing:-.02em;
+              font-variant-numeric:tabular-nums}
+
+.tablewrap{border:1px solid var(--line);border-radius:var(--r);overflow-x:auto;overflow-y:hidden;background:var(--panel)}
+.table{width:100%;min-width:820px;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
+.table th{text-align:left;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+          padding:12px 12px;border-bottom:1px solid var(--line);background:var(--shell);font-weight:700}
+.table td{padding:11px 12px;border-bottom:1px solid var(--line);color:var(--ink-2);
+          font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+          vertical-align:middle}
+.table td.wrap{white-space:normal;overflow-wrap:anywhere}
+.table tr:last-child td{border-bottom:none}
+.table tbody tr:hover td{background:var(--panel-2);color:var(--ink)}
+.table .lane-tag{font-size:9px;letter-spacing:.09em;text-transform:uppercase;
+                 color:var(--blue-light);border:1px solid rgba(96,165,250,.35);
+                 border-radius:3px;padding:2px 5px}
+.hidden{display:none !important}
+
+/* ── settings ─────────────────────────────────────────────────────────── */
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.panel.wide{grid-column:1/-1}
+.panel h3{margin:0 0 14px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+          color:var(--blue-light);font-weight:800}
+.panel h3 .lane-dot{display:inline-block;width:7px;height:7px;border-radius:50%;
+                    background:var(--blue);margin-right:8px;vertical-align:1px}
+.hint{font-size:12px;color:var(--ink-3);margin:0 0 10px}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.switch{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line);
+        font-size:13px;color:var(--ink-2)}
+.switch:last-child{border-bottom:none}
+.switch input{width:16px;height:16px;flex:0 0 auto;accent-color:var(--blue)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{font-size:11px;padding:4px 9px;border-radius:20px;border:1px solid var(--line-2);color:var(--ink-2)}
+.never{list-style:none;margin:0;padding:0;columns:2;column-gap:30px;font-size:12.5px;color:var(--ink-2)}
+.never li{padding:5px 0 5px 20px;position:relative;break-inside:avoid}
+.never li:before{content:"—";position:absolute;left:0;color:var(--blue);font-weight:800}
+@media(max-width:820px){.never{columns:1}}
+
+.ghost{border:1px solid var(--line-2);border-radius:8px;padding:9px 14px;font-size:12.5px;
+       font-weight:600;color:var(--ink-2);transition:.12s;white-space:nowrap}
+.ghost:hover{border-color:var(--blue);color:var(--blue-light);background:var(--blue-dim)}
+.ghost.danger:hover{border-color:var(--short);color:var(--short);background:rgba(248,113,113,.08)}
+.primary{background:linear-gradient(160deg,var(--blue-light),var(--blue) 55%,var(--blue-deep));
+         color:#fff;border-radius:8px;padding:11px 22px;font-weight:800;font-size:13px;
+         box-shadow:0 4px 16px rgba(29,78,216,.35)}
+.savebar{display:flex;justify-content:space-between;align-items:center;margin-top:18px;
+         padding-top:16px;border-top:1px solid var(--line)}
+#saveNote{font-size:12px;color:var(--blue-light)}
+
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+       background:var(--panel-2);border:1px solid var(--line-2);border-radius:9px;padding:12px 18px;
+       font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:50;
+       box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.toast.on{opacity:1;transform:translateX(-50%)}
+
+@media(max-width:900px){
+  .main{padding:24px 18px 60px}
+  h1{font-size:34px}
+}
+
+/* ── phones ───────────────────────────────────────────────────────────────
+   The rail becomes two rows at the top: the mark and Run now on the first,
+   the six view buttons on the second. The selected view keeps its label; the
+   rest are letters, because six spelled-out labels do not fit in 390px.
+   ──────────────────────────────────────────────────────────────────────── */
+@media(max-width:760px){
+  .shell{grid-template-columns:1fr;padding-bottom:10px}
+
+  .rail{
+    position:sticky;top:0;z-index:40;height:auto;flex-direction:row;flex-wrap:wrap;
+    align-items:center;gap:10px;padding:10px 12px;
+    border-right:0;border-bottom:1px solid var(--line);
+    background:rgba(10,15,28,.94);backdrop-filter:blur(10px);
+  }
+  .brand{border-bottom:0;padding:0;gap:9px}
+  .mark{width:32px;height:32px;border-radius:8px}
+  .brand-txt b{font-size:14px}
+  .brand-txt span{display:none}
+
+  .nav{order:3;width:100%;flex-direction:row;gap:6px;margin:6px 0 0;overflow:visible;flex:none}
+  .nav-sep{display:none}
+  .nav-item{padding:7px 2px;flex:1;flex-direction:column;justify-content:center;gap:4px}
+  .nav-item i{width:32px;height:32px;font-size:12px}
+  .nav-item span{display:block;font-size:9px;letter-spacing:.02em;font-weight:700}
+
+  .rail-foot{
+    order:2;margin-left:auto;flex-direction:row;align-items:center;gap:8px;
+    border-top:0;padding:0;width:auto;
+  }
+  .pulse{padding:0}
+  .pulse em{display:none}
+  .run-btn{padding:9px 14px;font-size:12px}
+
+  .main{padding:18px 14px 76px;max-width:none}
+  h1{font-size:30px;letter-spacing:-.03em}
+  .sub{font-size:12.5px}
+  .vhead{flex-direction:column;align-items:flex-start;gap:14px;padding-bottom:14px;margin-bottom:16px}
+  .vstats{width:100%;justify-content:space-between;gap:12px}
+  .stat{text-align:left}
+  .stat b{font-size:26px}
+
+  /* the time moves up next to the symbol instead of taking a line of its own,
+     which is what makes a row fit in half the height */
+  .rec-body{
+    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-areas:'id end' 'figs figs';
+    align-items:start;gap:9px 12px;padding:13px 10px 13px 13px;
+  }
+  .rec-id{grid-area:id}
+  .rec-end{grid-area:end;padding:0;align-items:flex-end;padding-top:2px}
+  .rec-figs{grid-area:figs;gap:18px}
+  .fig b{font-size:16.5px}
+  .rec-note{padding:0 10px 11px 13px;margin-top:-2px}
+
+  .toolbar{gap:8px}
+  .toolbar .cell{min-width:calc(50% - 4px);flex:1}
+  .toolbar .cell input,.toolbar .cell select{font-size:13px;padding:9px 10px}
+  .hist-count{margin-left:0;width:100%;text-align:left;display:flex;align-items:baseline;gap:8px;padding:0}
+  .hist-count b{display:inline;font-size:16px}
+
+  .board{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .variant .big{font-size:26px}
+
+  .settings-grid{grid-template-columns:1fr}
+
+  /* the history table on a phone: drop direction, entry and tag — they are in
+     the export, and six columns is what fits without truncating anything */
+  #history-table{table-layout:auto;min-width:0}
+  #history-table col{width:auto !important}
+  #history-table th:nth-child(5),#history-table td:nth-child(5),
+  #history-table th:nth-child(6),#history-table td:nth-child(6),
+  #history-table th:nth-child(8),#history-table td:nth-child(8),
+  #history-table th:nth-child(9),#history-table td:nth-child(9){display:none}
+  #history-table th{padding:10px 8px;font-size:8.5px;letter-spacing:.1em}
+  #history-table td{padding:10px 8px;font-size:11.5px}
+}
+
+</style>
+<link rel="icon" href="data:image/png;base64,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">
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── rail ─────────────────────────────────────────────── -->
+  <aside class="rail">
+    <div class="brand">
+      <div class="mark"><img src="data:image/png;base64,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" alt="ASX"></div>
+      <div class="brand-txt"><b>ASX</b><span>investment tool</span></div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item" data-view="scalp"><i>S</i><span>Scalp</span></button>
+      <button class="nav-item" data-view="intraday"><i>I</i><span>Intraday</span></button>
+      <button class="nav-item" data-view="watch"><i>W</i><span>Watch</span></button>
+      <button class="nav-item" data-view="lab"><i>L</i><span>Lab</span></button>
+      <div class="nav-sep"></div>
+      <button class="nav-item" data-view="history"><i>H</i><span>History</span></button>
+      <button class="nav-item" data-view="settings"><i>⚙</i><span>Settings</span></button>
+    </nav>
+
+    <div class="rail-foot">
+      <div class="pulse" id="pulse"><span></span><em id="pulseText">idle</em></div>
+      <button class="run-btn" id="runNow">Run now</button>
+    </div>
+  </aside>
+
+  <!-- ── main ─────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- SCALP -->
+    <section class="view" id="view-scalp">
+      <header class="vhead">
+        <div>
+          <h1>Scalp</h1>
+          <p class="sub">Two frames. One level. Every break prints. Today only — older rows are in History.</p>
+        </div>
+        <div class="vstats" id="stats-scalp"></div>
+      </header>
+      <div class="feed" id="feed-scalp"></div>
+    </section>
+
+    <!-- INTRADAY -->
+    <section class="view" id="view-intraday">
+      <header class="vhead">
+        <div>
+          <h1>Intraday</h1>
+          <p class="sub">1h finds the shape and the level. 15m decides whether you hear about it. Today only.</p>
+        </div>
+        <div class="vstats" id="stats-intraday"></div>
+      </header>
+      <div class="feed" id="feed-intraday"></div>
+    </section>
+
+    <!-- WATCH -->
+    <section class="view" id="view-watch">
+      <header class="vhead">
+        <div>
+          <h1>Watch</h1>
+          <p class="sub">Wake-ups, not confirmations. The structure tells you early; the entry is yours. Today only.</p>
+        </div>
+        <div class="vstats" id="stats-watch"></div>
+      </header>
+      <div class="feed" id="feed-watch"></div>
+    </section>
+
+    <!-- LAB -->
+    <section class="view" id="view-lab">
+      <header class="vhead">
+        <div>
+          <h1>Lab</h1>
+          <p class="sub">Nine confirmation ideas, scored silently against an artificial ruler. Nothing here notifies. Today only.</p>
+        </div>
+        <div class="vstats" id="stats-lab"></div>
+      </header>
+      <div class="board" id="lab-board"></div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="view" id="view-history">
+      <header class="vhead">
+        <div>
+          <h1>History</h1>
+          <p class="sub">Everything every lane has ever written. Pick a period, pick a lane, take it out as JSON or Excel.</p>
+        </div>
+        <div class="vstats" id="stats-history"></div>
+      </header>
+
+      <div class="toolbar">
+        <label class="cell"><span>Period</span>
+          <select id="histRange">
+            <option value="month">A month</option>
+            <option value="day">One day</option>
+            <option value="d3">Last 3 days</option>
+            <option value="d7">Last 7 days</option>
+            <option value="d14">Last 14 days</option>
+          </select>
+        </label>
+        <label class="cell" id="cellMonth"><span>Month</span>
+          <input id="histMonth" type="month">
+        </label>
+        <label class="cell hidden" id="cellDay"><span>Day</span>
+          <input id="histDay" type="date">
+        </label>
+        <label class="cell"><span>Lane</span>
+          <select id="histLane">
+            <option value="all">All lanes</option>
+            <option value="scalp">Scalp</option>
+            <option value="intraday">Intraday</option>
+            <option value="watch">Watch</option>
+            <option value="lab">Lab</option>
+          </select>
+        </label>
+        <label class="cell"><span>Export format</span>
+          <select id="histFormat">
+            <option value="xlsx">Excel (.xlsx)</option>
+            <option value="json">JSON (.json)</option>
+          </select>
+        </label>
+        <button class="ghost" id="exportHistory">Export period</button>
+        <button class="ghost danger" id="clearHistory">Clear all</button>
+        <div class="hist-count"><b id="histCount">0</b>rows in view</div>
+      </div>
+
+      <div class="tablewrap"><table class="table" id="history-table">
+        <colgroup>
+          <col style="width:112px"><col style="width:84px"><col style="width:92px">
+          <col style="width:92px"><col style="width:160px"><col style="width:70px">
+          <col style="width:100px"><col style="width:100px"><col style="width:150px">
+        </colgroup>
+        <thead><tr>
+          <th>When</th><th>Lane</th><th>Kind</th><th>Symbol</th><th>Pattern</th>
+          <th>Dir</th><th>Level</th><th>Entry</th><th>Tag</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <header class="vhead">
+        <div>
+          <h1>Settings</h1>
+          <p class="sub">Three lanes that talk, so three channels. Each one has its own bot and its own chat.</p>
+        </div>
+      </header>
+
+      <div class="settings-grid">
+
+        <div class="panel">
+          <h3><span class="lane-dot"></span>Scalp channel</h3>
+          <label class="field"><span>Bot token</span>
+            <input id="tgToken-scalp" type="password" placeholder="123456:ABC-DEF…" autocomplete="off">
+          </label>
+          <label class="field"><span>Chat ID</span>
+            <input id="tgChat-scalp" type="text" placeholder="-1001234567890" autocomplete="off">
+          </label>
+          <button class="ghost test-tg" data-lane="scalp">Send a test message</button>
+        </div>
+
+        <div class="panel">
+          <h3><span class="lane-dot"></span>Intraday channel</h3>
+          <label class="field"><span>Bot token</span>
+            <input id="tgToken-i1" type="password" placeholder="123456:ABC-DEF…" autocomplete="off">
+          </label>
+          <label class="field"><span>Chat ID</span>
+            <input id="tgChat-i1" type="text" placeholder="-1001234567890" autocomplete="off">
+          </label>
+          <button class="ghost test-tg" data-lane="i1">Send a test message</button>
+        </div>
+
+        <div class="panel">
+          <h3><span class="lane-dot"></span>Watch channel</h3>
+          <label class="field"><span>Bot token</span>
+            <input id="tgToken-watch" type="password" placeholder="123456:ABC-DEF…" autocomplete="off">
+          </label>
+          <label class="field"><span>Chat ID</span>
+            <input id="tgChat-watch" type="text" placeholder="-1001234567890" autocomplete="off">
+          </label>
+          <button class="ghost test-tg" data-lane="watch">Send a test message</button>
+        </div>
+
+        <div class="panel">
+          <h3><span class="lane-dot"></span>Lab channel</h3>
+          <p class="hint">There isn't one. The lab records rows and never sends a message — that is the whole point of it. Its rows still land in History.</p>
+        </div>
+
+        <div class="panel">
+          <h3>Symbols</h3>
+          <p class="hint">Binance pairs, comma separated. Every lane scales with this list.</p>
+          <input id="symbols" type="text" placeholder="BTCUSDT, ETHUSDT, SOLUSDT">
+          <div class="chips" id="symbolChips"></div>
+        </div>
+
+        <div class="panel">
+          <h3>Lanes</h3>
+          <label class="switch"><input type="checkbox" id="lane-scalp"><span>Scalp · 5m→1m and 15m→5m</span></label>
+          <label class="switch"><input type="checkbox" id="lane-i1"><span>Intraday · 1h→15m</span></label>
+          <label class="switch"><input type="checkbox" id="lane-watch"><span>Watch · wake-ups and close-outs</span></label>
+          <label class="switch"><input type="checkbox" id="lane-lab"><span>Lab · records only, never notifies</span></label>
+        </div>
+
+        <div class="panel">
+          <h3>Watch lane</h3>
+          <label class="field"><span>Frame</span>
+            <select id="watchFrame">
+              <option value="1h">1h — about 1.19 messages a day</option>
+              <option value="4h">4h — about 0.38 messages a day</option>
+            </select>
+          </label>
+          <label class="field"><span>Close-out backstop (bars)</span>
+            <input id="closeOutBars" type="number" min="4" max="60" step="1">
+          </label>
+          <label class="switch"><input type="checkbox" id="sendCloseOuts"><span>Send close-out messages</span></label>
+        </div>
+
+        <div class="panel wide">
+          <h3>What this tool will never do</h3>
+          <ul class="never">
+            <li>Place, size, or manage a trade</li>
+            <li>Draw a chart or an indicator</li>
+            <li>Send a stop, a target, or an expiry</li>
+            <li>Gate a signal on volume, spread, session or strength</li>
+            <li>Let one lane read another lane's state</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="savebar">
+        <span id="saveNote"></span>
+        <button class="primary" id="saveSettings">Save settings</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script type="module">
+
+/* flatten by tools/build-preview.mjs — store, helpers, demo seed, app */
+
+/* each module keeps its own scope, so a name in the store can never collide
+   with the same name in the app — which is exactly what happens to
+   saveSettings in both files */
+const store = (() => {
+// ============================================================================
+// store — settings, journal, dedupe, lane state.
+//
+// The API never changes. Where the data LIVES is a backend:
+//
+//   • local     — chrome.storage.local (the extension) or memory (tests)
+//   • supabase  — Postgres, so a phone, a laptop and the sweep job all read
+//                 the same rows (src/store/supabase-backend.js)
+//
+// Call `useBackend()` once and every caller — the app, the runner, the tests —
+// keeps using the same functions.
+// ============================================================================
+
+const STORE_VERSION = 1;
+
+// One channel per lane that talks. Lab is absent on purpose — it never sends.
+const LANE_CHANNELS = ['scalp', 'i1', 'watch'];
+
+const emptyChannel = () => ({ token: '', chatId: '' });
+
+const DEFAULT_SETTINGS = {
+  version: STORE_VERSION,
+  symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'],
+  telegram: {
+    scalp: emptyChannel(),
+    i1: emptyChannel(),
+    watch: emptyChannel()
+  },
+  lanes: { scalp: true, i1: true, watch: true, lab: true },
+  watchFrame: '1h',            // '1h' | '4h'
+  watchCloseOutBars: 12,
+  sendCloseOuts: true,
+  scalpPresets: ['S1', 'S2'],
+  paused: false,
+  maxJournal: 5000
+};
+
+const KEY_SETTINGS = 'settings';
+const KEY_JOURNAL = 'journal';
+const KEY_SENT = 'sent';
+const KEY_STATE = 'laneState';
+const KEY_STATUS = 'status';
+
+// --- the fallback area ------------------------------------------------------
+// Module scope on purpose: a fresh Map per call would silently drop everything
+// between two reads.
+const MEM = new Map();
+const MEMORY_STORE = {
+  get: async k => (MEM.has(k) ? { [k]: MEM.get(k) } : {}),
+  set: async o => { for (const [k, v] of Object.entries(o)) MEM.set(k, v); },
+  remove: async k => { MEM.delete(k); }
+};
+
+function defaultArea() {
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) return chrome.storage.local;
+  return MEMORY_STORE;
+}
+
+// ---------------------------------------------------------------------------
+// the local backend — a few keys in a web storage area
+// ---------------------------------------------------------------------------
+function createLocalBackend(area = null) {
+  const a = area || defaultArea();
+
+  const read = async key => (await a.get(key))?.[key];
+  const write = async (key, value) => a.set({ [key]: value });
+
+  return {
+    kind: 'local',
+
+    async getSettings() { return mergeSettings(await read(KEY_SETTINGS)); },
+
+    async saveSettings(patch) {
+      const cur = await this.getSettings();
+      const next = mergeSettings({
+        ...cur,
+        ...patch,
+        telegram: mergeTelegram(cur.telegram, patch.telegram),
+        lanes: { ...cur.lanes, ...(patch.lanes || {}) }
+      });
+      await write(KEY_SETTINGS, next);
+      return next;
+    },
+
+    async getJournal() { return (await read(KEY_JOURNAL)) || []; },
+
+    async appendJournal(rows, max = DEFAULT_SETTINGS.maxJournal) {
+      if (!rows || !rows.length) return;
+      const cur = await this.getJournal();
+      await write(KEY_JOURNAL, rows.concat(cur).slice(0, max));
+    },
+
+    async clearJournal() { await write(KEY_JOURNAL, []); },
+
+    async claim(keys, nowMs = Date.now()) {
+      if (!keys || !keys.length) return [];
+      const sent = (await read(KEY_SENT)) || {};
+      const fresh = keys.filter(k => !sent[k]);
+      for (const k of fresh) sent[k] = nowMs;
+      const cutoff = nowMs - 14 * 24 * 60 * 60_000;
+      for (const [k, ts] of Object.entries(sent)) if (ts < cutoff) delete sent[k];
+      await write(KEY_SENT, sent);
+      return fresh;
+    },
+
+    async release(keys) {
+      if (!keys || !keys.length) return;
+      const sent = (await read(KEY_SENT)) || {};
+      for (const k of keys) delete sent[k];
+      await write(KEY_SENT, sent);
+    },
+
+    async clearSent() { await write(KEY_SENT, {}); },
+
+    async getLaneState() { return (await read(KEY_STATE)) || {}; },
+    async saveLaneState(state) { await write(KEY_STATE, state); },
+
+    async getStatus() {
+      return (await read(KEY_STATUS)) || { lastRun: null, lastError: null, counts: {}, lanes: {} };
+    },
+    async saveStatus(status) { await write(KEY_STATUS, status); }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// which backend answers this call
+// ---------------------------------------------------------------------------
+let active = null;
+
+/** Point the store at a backend (the supabase one, once the user is signed in). */
+function useBackend(backend) { active = backend; return backend; }
+function activeBackend() { return active; }
+function resetBackend() { active = null; }
+
+function backendFor(storage) {
+  if (storage) return createLocalBackend(storage);   // tests hand in their own area
+  return active || createLocalBackend();
+}
+
+// ---------------------------------------------------------------------------
+// the public API — unchanged, so nothing else had to move
+// ---------------------------------------------------------------------------
+async function getSettings(storage) { return backendFor(storage).getSettings(); }
+async function saveSettings(patch, storage) { return backendFor(storage).saveSettings(patch); }
+
+async function getJournal(storage) { return backendFor(storage).getJournal(); }
+async function appendJournal(rows, storage, max) { return backendFor(storage).appendJournal(rows, max); }
+async function clearJournal(storage) { return backendFor(storage).clearJournal(); }
+
+async function getSent(storage) { return backendFor(storage).getSent?.() ?? {}; }
+async function claim(keys, storage, nowMs) { return backendFor(storage).claim(keys, nowMs); }
+async function release(keys, storage) { return backendFor(storage).release(keys); }
+async function clearSent(storage) { return backendFor(storage).clearSent(); }
+
+async function getLaneState(storage) { return backendFor(storage).getLaneState(); }
+async function saveLaneState(state, storage) { return backendFor(storage).saveLaneState(state); }
+
+async function getStatus(storage) { return backendFor(storage).getStatus(); }
+async function saveStatus(status, storage) { return backendFor(storage).saveStatus(status); }
+
+// ---------------------------------------------------------------------------
+// pure helpers — no storage involved
+// ---------------------------------------------------------------------------
+function mergeSettings(saved) {
+  if (!saved) return clone(DEFAULT_SETTINGS);
+  return {
+    ...DEFAULT_SETTINGS,
+    ...saved,
+    telegram: migrateTelegram(saved.telegram),
+    lanes: { ...DEFAULT_SETTINGS.lanes, ...(saved.lanes || {}) }
+  };
+}
+
+/**
+ * v1.0.0 stored one { token, chatId } for the whole product. Later versions
+ * store one per lane. A flat pair is copied into every lane so nobody loses a
+ * channel they had already configured.
+ */
+function migrateTelegram(tg) {
+  const flat = (tg && typeof tg.token === 'string' && (tg.token || tg.chatId))
+    ? { token: tg.token, chatId: tg.chatId || '' }
+    : null;
+
+  const out = {};
+  for (const lane of LANE_CHANNELS) {
+    const c = tg && tg[lane];
+    if (c && typeof c === 'object') {
+      out[lane] = { token: c.token || '', chatId: c.chatId || '' };
+    } else {
+      out[lane] = flat ? { ...flat } : emptyChannel();
+    }
+  }
+  return out;
+}
+
+function mergeTelegram(cur, patch) {
+  const out = { ...cur };
+  for (const lane of LANE_CHANNELS) {
+    if (patch?.[lane]) {
+      out[lane] = {
+        token: patch[lane].token ?? cur[lane].token,
+        chatId: patch[lane].chatId ?? cur[lane].chatId
+      };
+    }
+  }
+  return out;
+}
+
+/**
+ * The credentials for one lane, or null when that channel is not set up.
+ * Lab is refused by name — it never sends, so it can never be handed a channel.
+ */
+function channelFor(settings, lane) {
+  if (!LANE_CHANNELS.includes(lane)) return null;
+  const c = settings?.telegram?.[lane];
+  if (!c || !c.token || !c.chatId) return null;
+  return c;
+}
+
+/** 'YYYY-MM' in the user's own timezone, which is what a month picker means. */
+function monthKey(atMs) {
+  const d = new Date(atMs);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function dayKey(atMs) {
+  const d = new Date(atMs);
+  return `${monthKey(atMs)}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Every month that has rows, newest first. */
+function monthsIn(rows) {
+  const set = new Set(rows.map(r => monthKey(r.at)));
+  return [...set].sort().reverse();
+}
+
+/** The export periods, plus the month picker. Values match the <select>. */
+const RANGES = ['month', 'day', 'd3', 'd7', 'd14'];
+
+const startOfDay = ms => {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+};
+const addDays = (ms, n) => {
+  const d = new Date(ms);
+  d.setDate(d.getDate() + n);
+  return d.getTime();
+};
+
+/**
+ * Turn a period into a half-open window [from, to) in the user's own timezone.
+ * "Last 3 days" means today and the two days before it, not 72 hours.
+ */
+function rangeWindow({ range = 'month', month, day, now = Date.now() } = {}) {
+  if (range === 'month') {
+    const key = month || monthKey(now);
+    const [y, m] = key.split('-').map(Number);
+    return {
+      from: new Date(y, m - 1, 1).getTime(),
+      to: new Date(y, m, 1).getTime(),
+      label: key
+    };
+  }
+  if (range === 'day') {
+    const from = day ? startOfDay(new Date(`${day}T00:00:00`).getTime()) : startOfDay(now);
+    return { from, to: addDays(from, 1), label: dayKey(from) };
+  }
+  const n = range === 'd3' ? 3 : range === 'd7' ? 7 : range === 'd14' ? 14 : 1;
+  const from = addDays(startOfDay(now), -(n - 1));
+  return { from, to: addDays(startOfDay(now), 1), label: `last-${n}-days` };
+}
+
+/** Rows inside a period, optionally narrowed to one lane. */
+// A row's `at` is a number of milliseconds in the local store, but Supabase
+// hands back a timestamptz, which arrives as a string like
+// '2026-10-21T09:14:00+00:00'. Comparing a string to a number is silently
+// always false, so every period filter would come back empty in cloud mode.
+// Coerce once, here, and let everything downstream stay numeric.
+function atMs(at) {
+  if (typeof at === 'number') return at;
+  const t = Date.parse(at);
+  return Number.isNaN(t) ? NaN : t;
+}
+
+function filterByRange(rows, opts = {}) {
+  const { from, to } = rangeWindow(opts);
+  const lane = opts.lane;
+  return rows.filter(r => {
+    const t = atMs(r.at);
+    return t >= from && t < to &&
+      (!lane || lane === 'all' || r.lane === lane);
+  });
+}
+
+/** Newest first — the order every list in the UI is read in. */
+function byNewest(rows) {
+  return [...rows].sort((a, b) => atMs(b.at) - atMs(a.at));
+}
+
+function filterJournal(rows, { month, lane } = {}) {
+  return rows.filter(r =>
+    (!month || monthKey(r.at) === month) &&
+    (!lane || lane === 'all' || r.lane === lane)
+  );
+}
+
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  return {
+    STORE_VERSION,
+    LANE_CHANNELS,
+    DEFAULT_SETTINGS,
+    createLocalBackend,
+    useBackend,
+    activeBackend,
+    resetBackend,
+    getSettings,
+    saveSettings,
+    getJournal,
+    appendJournal,
+    clearJournal,
+    getSent,
+    claim,
+    release,
+    clearSent,
+    getLaneState,
+    saveLaneState,
+    getStatus,
+    saveStatus,
+    mergeSettings,
+    channelFor,
+    monthKey,
+    dayKey,
+    monthsIn,
+    RANGES,
+    rangeWindow,
+    atMs,
+    filterByRange,
+    byNewest,
+    filterJournal,
+  };
+})();
+
+const { buildXlsx } = (() => {
+// ============================================================================
+// xlsx — a real .xlsx writer in 150 lines, no dependencies.
+//
+// An .xlsx is a zip of XML files. We write the zip ourselves in "stored"
+// (uncompressed) mode, which is legal and keeps this file dependency-free —
+// important, because an extension cannot run npm. Excel, Numbers, LibreOffice
+// and Google Sheets all open a stored zip exactly like a deflated one.
+//
+//   const bytes = buildXlsx([{ name: 'History', rows: [['when','lane'],[...]] }]);
+// ============================================================================
+
+const enc = new TextEncoder();
+
+// ── CRC32 ──────────────────────────────────────────────────────────────────
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(bytes) {
+  let c = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+// ── zip (stored) ───────────────────────────────────────────────────────────
+function zip(files) {
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+
+  // a fixed timestamp keeps two exports of the same data byte-identical
+  const time = 0;
+  const date = (2026 - 1980) << 9 | 1 << 5 | 1;
+
+  for (const { name, data } of files) {
+    const nameBytes = enc.encode(name);
+    const crc = crc32(data);
+
+    const local = new Uint8Array(30 + nameBytes.length);
+    const lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true);          // version needed
+    lv.setUint16(6, 0, true);           // flags
+    lv.setUint16(8, 0, true);           // method 0 = stored
+    lv.setUint16(10, time, true);
+    lv.setUint16(12, date, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, data.length, true);
+    lv.setUint32(22, data.length, true);
+    lv.setUint16(26, nameBytes.length, true);
+    lv.setUint16(28, 0, true);
+    local.set(nameBytes, 30);
+
+    chunks.push(local, data);
+
+    const dir = new Uint8Array(46 + nameBytes.length);
+    const dv = new DataView(dir.buffer);
+    dv.setUint32(0, 0x02014b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 20, true);
+    dv.setUint16(8, 0, true);
+    dv.setUint16(10, 0, true);
+    dv.setUint16(12, time, true);
+    dv.setUint16(14, date, true);
+    dv.setUint32(16, crc, true);
+    dv.setUint32(20, data.length, true);
+    dv.setUint32(24, data.length, true);
+    dv.setUint16(28, nameBytes.length, true);
+    dv.setUint16(30, 0, true);
+    dv.setUint16(32, 0, true);
+    dv.setUint16(34, 0, true);
+    dv.setUint16(36, 0, true);
+    dv.setUint32(38, 0, true);
+    dv.setUint32(42, offset, true);
+    dir.set(nameBytes, 46);
+    central.push(dir);
+
+    offset += local.length + data.length;
+  }
+
+  const centralSize = central.reduce((n, c) => n + c.length, 0);
+  const end = new Uint8Array(22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, offset, true);
+
+  const total = offset + centralSize + 22;
+  const out = new Uint8Array(total);
+  let p = 0;
+  for (const c of chunks) { out.set(c, p); p += c.length; }
+  for (const c of central) { out.set(c, p); p += c.length; }
+  out.set(end, p);
+  return out;
+}
+
+// ── cell references ────────────────────────────────────────────────────────
+function colName(i) {
+  let s = '';
+  i += 1;
+  while (i > 0) {
+    const r = (i - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    i = Math.floor((i - 1) / 26);
+  }
+  return s;
+}
+
+const esc = s => String(s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  // strip control characters Excel refuses
+  .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+
+function cell(ref, value, bold) {
+  const style = bold ? ' s="1"' : '';
+  if (value == null || value === '') return `<c r="${ref}"${style}/>`;
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return `<c r="${ref}"${style}><v>${value}</v></c>`;
+  }
+  if (typeof value === 'boolean') {
+    return `<c r="${ref}" t="b"${style}><v>${value ? 1 : 0}</v></c>`;
+  }
+  return `<c r="${ref}" t="inlineStr"${style}><is><t xml:space="preserve">${esc(value)}</t></is></c>`;
+}
+
+function sheetXml(rows) {
+  const body = rows.map((row, r) => {
+    const cells = row.map((v, c) => cell(colName(c) + (r + 1), v, r === 0)).join('');
+    return `<row r="${r + 1}">${cells}</row>`;
+  }).join('');
+
+  const width = rows.reduce((n, r) => Math.max(n, r.length), 1);
+  const cols = Array.from({ length: width }, (_, i) => {
+    const longest = rows.slice(0, 200).reduce((n, r) => {
+      const v = r[i];
+      return Math.max(n, v == null ? 0 : String(v).length);
+    }, 8);
+    return `<col min="${i + 1}" max="${i + 1}" width="${Math.min(46, longest + 3)}" customWidth="1"/>`;
+  }).join('');
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+<cols>${cols}</cols>
+<sheetData>${body}</sheetData>
+</worksheet>`;
+}
+
+const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="2">
+  <font><sz val="11"/><name val="Calibri"/><color rgb="FF1F2937"/></font>
+  <font><b/><sz val="11"/><name val="Calibri"/><color rgb="FFFFFFFF"/></font>
+</fonts>
+<fills count="3">
+  <fill><patternFill patternType="none"/></fill>
+  <fill><patternFill patternType="gray125"/></fill>
+  <fill><patternFill patternType="solid"><fgColor rgb="FF1D4ED8"/><bgColor indexed="64"/></patternFill></fill>
+</fills>
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="2">
+  <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+  <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+
+const safeSheetName = (name, i) =>
+  String(name || `Sheet${i + 1}`).replace(/[\\/*?:[\]]/g, ' ').slice(0, 31) || `Sheet${i + 1}`;
+
+/**
+ * @param {{name:string, rows:any[][]}[]} sheets
+ * @returns {Uint8Array}
+ */
+function buildXlsx(sheets) {
+  const list = (sheets || []).filter(s => s && s.rows);
+  if (!list.length) throw new Error('xlsx: no sheets');
+
+  const files = [];
+  const add = (name, text) => files.push({ name, data: enc.encode(text) });
+
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+${list.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('\n')}
+</Types>`;
+
+  const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+  const workbook = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+ xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets>${list.map((s, i) =>
+    `<sheet name="${esc(safeSheetName(s.name, i))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets>
+</workbook>`;
+
+  const wbRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+${list.map((_, i) =>
+    `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('\n')}
+<Relationship Id="rId${list.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+  add('[Content_Types].xml', contentTypes);
+  add('_rels/.rels', rootRels);
+  add('xl/workbook.xml', workbook);
+  add('xl/_rels/workbook.xml.rels', wbRels);
+  add('xl/styles.xml', STYLES);
+  list.forEach((s, i) => add(`xl/worksheets/sheet${i + 1}.xml`, sheetXml(s.rows)));
+
+  return zip(files);
+}
+
+  return { buildXlsx };
+})();
+
+/* ── demo seed ────────────────────────────────────────────────────────────
+   Everything below this line exists only in this preview file. The shipped
+   app reads its rows from Supabase, never from an array. */
+
+const DEMO_JOURNAL = [
+  {
+    "at": "2026-10-21T00:24:17.553Z",
+    "lane": "scalp",
+    "kind": "SIGNAL",
+    "symbol": "BTCUSDT",
+    "direction": "long",
+    "level": 67842.5,
+    "entry": 67861,
+    "strength": "A",
+    "pattern": "break and retest",
+    "note": "closed at 0.71 of the range · body 0.62 · first touch of the level"
+  },
+  {
+    "at": "2026-10-21T00:20:15.826Z",
+    "lane": "scalp",
+    "kind": "SIGNAL",
+    "symbol": "SOLUSDT",
+    "direction": "short",
+    "level": 172.84,
+    "entry": 172.66,
+    "strength": "B",
+    "pattern": "range break",
+    "note": "closed at 0.66 of the range · body 0.55 · second attempt at it"
+  },
+  {
+    "at": "2026-10-21T00:15:41.869Z",
+    "lane": "scalp",
+    "kind": "SIGNAL",
+    "symbol": "ETHUSDT",
+    "direction": "long",
+    "level": 3312.4,
+    "entry": 3314.1,
+    "strength": "A",
+    "pattern": "break and retest",
+    "note": "closed at 0.83 of the range · body 0.70 · level was untouched for 40 bars"
+  },
+  {
+    "at": "2026-10-21T00:09:47.337Z",
+    "lane": "scalp",
+    "kind": "SIGNAL",
+    "symbol": "BTCUSDT",
+    "direction": "short",
+    "level": 67905,
+    "entry": 67898.5,
+    "strength": "C",
+    "pattern": "range break",
+    "note": "closed at 0.65 of the range · body 0.51 · thin body, tagged C not dropped"
+  },
+  {
+    "at": "2026-10-21T00:03:04.460Z",
+    "lane": "scalp",
+    "kind": "SIGNAL",
+    "symbol": "SOLUSDT",
+    "direction": "long",
+    "level": 171.92,
+    "entry": 172.05,
+    "strength": "B",
+    "pattern": "break and retest",
+    "note": "closed at 0.74 of the range · body 0.58 · held the retest"
+  },
+  {
+    "at": "2026-10-21T00:22:08.632Z",
+    "lane": "i1",
+    "kind": "ARMED",
+    "symbol": "ETHUSDT",
+    "direction": "long",
+    "level": 3308,
+    "entry": null,
+    "strength": "–",
+    "pattern": "1h range, 15m inside it",
+    "note": "price came within 0.27 of the 1h edge — armed, nothing sent"
+  },
+  {
+    "at": "2026-10-21T00:22:56.977Z",
+    "lane": "i1",
+    "kind": "SIGNAL",
+    "symbol": "ETHUSDT",
+    "direction": "long",
+    "level": 3308,
+    "entry": 3310.4,
+    "strength": "A",
+    "pattern": "1h range, 15m inside it",
+    "note": "confirmed on the 15m close · closed at 0.78 of the range · body 0.64"
+  },
+  {
+    "at": "2026-10-21T00:12:44.603Z",
+    "lane": "watch",
+    "kind": "SIGNAL",
+    "symbol": "BTCUSDT",
+    "direction": "long",
+    "level": 67510,
+    "entry": 67532,
+    "strength": "A",
+    "pattern": "Wyckoff spring",
+    "note": "spring 9 bars back · range is 0.09 of price wide · swept 67488 and closed back inside"
+  },
+  {
+    "at": "2026-10-21T00:02:00.000Z",
+    "lane": "watch",
+    "kind": "SIGNAL",
+    "symbol": "SOLUSDT",
+    "direction": "short",
+    "level": 174.6,
+    "entry": 174.44,
+    "strength": "B",
+    "pattern": "head and shoulders",
+    "note": "neckline 174.60 · shoulders 15 bars apart · promising enough 0.0051 of price"
+  },
+  {
+    "at": "2026-10-21T00:25:05.898Z",
+    "lane": "lab",
+    "kind": "ROW",
+    "symbol": "BTCUSDT",
+    "direction": "long",
+    "level": 67788,
+    "entry": 67788,
+    "strength": "A_strict_single",
+    "pattern": "break and retest",
+    "note": "tp · artificial ruler 1× the measured move · bar 2"
+  },
+  {
+    "at": "2026-10-21T00:24:17.553Z",
+    "lane": "lab",
+    "kind": "ROW",
+    "symbol": "BTCUSDT",
+    "direction": "long",
+    "level": 67788,
+    "entry": 67788,
+    "strength": "B_two_closes",
+    "pattern": "break and retest",
+    "note": "tp · artificial ruler 1× the measured move · bar 3"
+  },
+  {
+    "at": "2026-10-21T00:23:29.207Z",
+    "lane": "lab",
+    "kind": "ROW",
+    "symbol": "BTCUSDT",
+    "direction": "long",
+    "level": 67788,
+    "entry": 67788,
+    "strength": "C_two_closes_bodies",
+    "pattern": "break and retest",
+    "note": "tp · artificial ruler 1× the measured move · bar 4"
+  },
+  {
+    "at": "2026-10-21T00:22:40.862Z",
+    "lane": "lab",
+    "kind": "ROW",
+    "symbol": "BTCUSDT",
+    "direction": "long",
+    "level": 67788,
+    "entry": 67788,
+    "strength": "D_two_of_three",
+    "pattern": "break and retest",
+    "note": "opposite · artificial ruler 1× the measured move · bar 5"
+  },
+  {
+    "at": "2026-10-21T00:21:52.517Z",
+    "lane": "lab",
+    "kind": "ROW",
+    "symbol": "BTCUSDT",
+    "direction": "long",
+    "level": 67788,
+    "entry": 67788,
+    "strength": "E_hold_after",
+    "pattern": "break and retest",
+    "note": "tp · artificial ruler 1× the measured move · bar 6"
+  },
+  {
+    "at": "2026-10-21T00:21:04.171Z",
+    "lane": "lab",
+    "kind": "ROW",
+    "symbol": "BTCUSDT",
+    "direction": "long",
+    "level": 67788,
+    "entry": 67788,
+    "strength": "F_softer_single",
+    "pattern": "break and retest",
+    "note": "both · artificial ruler 1× the measured move · bar 7"
+  },
+  {
+    "at": "2026-10-21T00:20:15.826Z",
+    "lane": "lab",
+    "kind": "ROW",
+    "symbol": "BTCUSDT",
+    "direction": "long",
+    "level": 67788,
+    "entry": 67788,
+    "strength": "G_displacement",
+    "pattern": "break and retest",
+    "note": "tp · artificial ruler 1× the measured move · bar 8"
+  },
+  {
+    "at": "2026-10-21T00:19:27.481Z",
+    "lane": "lab",
+    "kind": "ROW",
+    "symbol": "BTCUSDT",
+    "direction": "long",
+    "level": 67788,
+    "entry": 67788,
+    "strength": "H_two_candle_displacement",
+    "pattern": "break and retest",
+    "note": "open · artificial ruler 1× the measured move · bar 9"
+  },
+  {
+    "at": "2026-10-21T00:18:39.136Z",
+    "lane": "lab",
+    "kind": "ROW",
+    "symbol": "BTCUSDT",
+    "direction": "long",
+    "level": 67788,
+    "entry": 67788,
+    "strength": "I_body_plus_displacement",
+    "pattern": "break and retest",
+    "note": "opposite · artificial ruler 1× the measured move · bar 10"
+  }
+];
+const DEMO_SENT = [
+  {
+    "key": "BTCUSDT|long|67842.5",
+    "at": "2026-10-21T00:24:17.553Z"
+  },
+  {
+    "key": "SOLUSDT|short|172.84",
+    "at": "2026-10-21T00:20:15.826Z"
+  },
+  {
+    "key": "ETHUSDT|long|3312.4",
+    "at": "2026-10-21T00:15:41.869Z"
+  },
+  {
+    "key": "BTCUSDT|short|67905",
+    "at": "2026-10-21T00:09:47.337Z"
+  },
+  {
+    "key": "SOLUSDT|long|171.92",
+    "at": "2026-10-21T00:03:04.460Z"
+  },
+  {
+    "key": "ETHUSDT|long|3308",
+    "at": "2026-10-21T00:22:56.977Z"
+  },
+  {
+    "key": "BTCUSDT|long|67510",
+    "at": "2026-10-21T00:12:44.603Z"
+  },
+  {
+    "key": "SOLUSDT|short|174.6",
+    "at": "2026-10-21T00:02:00.000Z"
+  }
+];
+const DEMO_STATUS = {
+  "lastRun": "2026-10-21T00:22:42.589Z",
+  "lastOk": "2026-10-21T00:22:42.589Z",
+  "lastError": null,
+  "source": "sweep",
+  "lanes": {
+    "scalp": {
+      "scanned": 3,
+      "fired": 5,
+      "silent": 0
+    },
+    "i1": {
+      "scanned": 3,
+      "fired": 1,
+      "silent": 2
+    },
+    "watch": {
+      "scanned": 3,
+      "fired": 2,
+      "silent": 1
+    },
+    "lab": {
+      "scanned": 3,
+      "fired": 0,
+      "silent": 3
+    }
+  }
+};
+
+/* the run-now button talks to the service worker; here it just answers,
+   so the button can be pressed without throwing */
+globalThis.chrome = {
+  runtime: {
+    sendMessage: async () => ({
+      ok: true,
+      summary: { messages: 2, rows: 16, errors: [], sent: [], unsent: [] },
+    }),
+  },
+};
+
+for (const row of DEMO_JOURNAL) await store.appendJournal([row]);
+await store.saveStatus(DEMO_STATUS);
+await store.claim(DEMO_SENT.map((r) => r.key));
+
+/* a banner, so a screenshot of this is never mistaken for a live account */
+{
+  const bar = document.createElement('div');
+  bar.textContent = 'PREVIEW · sample data · nothing here is live';
+  bar.style.cssText = [
+    'position:fixed', 'left:0', 'right:0', 'bottom:0', 'z-index:9999',
+    'padding:8px 14px', 'text-align:center', 'letter-spacing:.14em',
+    'font:600 10px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
+    'color:#93b4f5', 'background:rgba(7,10,18,.95)',
+    'border-top:1px solid #1d2942', 'pointer-events:none',
+  ].join(';');
+  document.body.appendChild(bar);
+  /* keep the banner from sitting on top of the last row */
+  document.body.style.paddingBottom = '34px';
+}
+
+// ============================================================================
+// app — the whole UI. Vanilla, no framework, no build step.
+// Reads the store directly; talks to the service worker for runs.
+//
+// The lane views show TODAY. Anything older lives in History, where it can be
+// filtered by month and lane and taken out as JSON or a real .xlsx.
+// ============================================================================
+
+
+
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+const VIEWS = ['scalp', 'intraday', 'watch', 'lab', 'history', 'settings'];
+const LANE_OF_VIEW = { scalp: 'scalp', intraday: 'intraday', watch: 'watch', lab: 'lab' };
+const KIND_CLASS = { SIGNAL: 'long', WAKEUP: 'wake', 'WAKE-UP': 'wake', BREAK: 'break', 'CLOSE-OUT': 'dead', ROW: 'dead' };
+const CHANNELS = [
+  { key: 'scalp', label: 'Scalp' },
+  { key: 'i1', label: 'Intraday' },
+  { key: 'watch', label: 'Watch' }
+];
+
+let state = { settings: null, journal: [], status: null };
+
+// ── boot ───────────────────────────────────────────────────────────────────
+async function boot() {
+  await reload();
+  const hash = (location.hash || '#scalp').slice(1);
+  show(VIEWS.includes(hash) ? hash : 'scalp');
+  wire();
+  renderAll();
+  setInterval(refreshStatus, 8000);
+}
+
+async function reload() {
+  state.settings = await store.getSettings();
+  state.journal = await store.getJournal();
+  state.status = await store.getStatus();
+}
+
+function wire() {
+  $$('.nav-item').forEach(b => b.addEventListener('click', () => show(b.dataset.view)));
+  window.addEventListener('hashchange', () => {
+    const v = location.hash.slice(1);
+    if (VIEWS.includes(v)) show(v);
+  });
+  $('#runNow').addEventListener('click', runNow);
+  $('#saveSettings').addEventListener('click', saveSettings);
+  $$('.test-tg').forEach(b => b.addEventListener('click', () => testTelegram(b.dataset.lane)));
+  $('#histMonth').addEventListener('change', renderHistory);
+  $('#histDay').addEventListener('change', renderHistory);
+  $('#histRange').addEventListener('change', () => { syncRangeControls(); renderHistory(); });
+  $('#histLane').addEventListener('change', renderHistory);
+  $('#exportHistory').addEventListener('click', exportHistory);
+  $('#clearHistory').addEventListener('click', clearHistory);
+}
+
+// ── routing ────────────────────────────────────────────────────────────────
+function show(view) {
+  VIEWS.forEach(v => $(`#view-${v}`)?.classList.toggle('on', v === view));
+  $$('.nav-item').forEach(b => b.classList.toggle('on', b.dataset.view === view));
+  // A sandboxed iframe (the shared preview) refuses history writes — routing
+  // still works, it just does not survive a reload.
+  try { history.replaceState(null, '', `#${view}`); } catch { /* preview */ }
+  if (view === 'settings') fillSettings();
+  if (view === 'history') renderHistory();
+  if (view === 'lab') renderLab();
+}
+
+// ── rendering ──────────────────────────────────────────────────────────────
+function renderAll() {
+  renderFeed('scalp');
+  renderFeed('intraday');
+  renderFeed('watch');
+  renderLab();
+  renderHistory();
+  renderPulse();
+}
+
+/** Rows for one lane, TODAY only. Old rows live in History. */
+function todayRows(lane) {
+  const today = store.dayKey(Date.now());
+  return store.byNewest(state.journal.filter(r => r.lane === lane && store.dayKey(r.at) === today));
+}
+function laneRows(lane) {
+  return state.journal.filter(r => r.lane === lane);
+}
+
+function renderFeed(view) {
+  const lane = LANE_OF_VIEW[view];
+  const host = $(`#feed-${view}`);
+  const stats = $(`#stats-${view}`);
+  if (!host) return;
+
+  const rows = todayRows(lane).slice(0, 200);
+  if (stats) {
+    stats.innerHTML = `
+      <div class="stat"><b>${rows.length}</b><span>today</span></div>
+      <div class="stat"><b>${laneRows(lane).length}</b><span>all time</span></div>
+      <div class="stat"><b>${state.settings?.lanes?.[lane] ? 'on' : 'off'}</b><span>lane</span></div>`;
+  }
+
+  if (!rows.length) {
+    host.innerHTML = `<div class="empty"><b>Nothing today.</b>
+      The lane writes here the moment it sees something. Older rows are in
+      <em>History</em>. Press <em>Run now</em> to sweep immediately.</div>`;
+    return;
+  }
+
+  host.innerHTML = rows.map(r => {
+    const cls = KIND_CLASS[r.kind] || 'dead';
+    const dirCls = r.direction === 'long' || r.direction === 'BUY' ? 'long'
+                 : r.direction === 'short' || r.direction === 'SELL' ? 'short' : '';
+    // a dead structure has no direction any more — grey it out
+    const edge = (r.kind === 'CLOSE-OUT' || r.kind === 'ROW') ? 'dead' : (dirCls || cls);
+    const when = new Date(r.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const figs = [];
+    if (r.level != null) figs.push(`<div class="fig"><em>level</em><b>${fmt(r.level)}</b></div>`);
+    if (r.entry != null) figs.push(`<div class="fig"><em>entry</em><b>${fmt(r.entry)}</b></div>`);
+    if (r.strength) figs.push(`<div class="fig"><em>tag</em><b class="quiet">${escapeHtml(r.strength)}</b></div>`);
+
+    return `
+      <article class="rec ${edge}">
+        <span class="rec-edge"></span>
+        <div class="rec-body">
+          <div class="rec-id">
+            <span class="sym">${r.symbol || '—'}</span>
+            <span class="meta">
+              ${dirCls ? `<span class="pill ${dirCls}">${r.direction.toUpperCase()}</span>` : ''}
+              ${r.kind === 'SIGNAL' ? '' : `<span class="pill ${cls}">${r.kind}</span>`}
+              <span class="pattern">${escapeHtml(r.pattern || '')}</span>
+            </span>
+          </div>
+          <div class="rec-figs">${figs.join('')}</div>
+          <div class="rec-end"><span class="when">${when}</span></div>
+        </div>
+        ${r.note ? `<div class="rec-note">${escapeHtml(r.note)}</div>` : ''}
+      </article>`;
+  }).join('');
+}
+
+/* The lab records nine readings of the same idea. The names in the lane are
+   code identifiers (A_strict_single); nobody wants to read those on a phone,
+   so the board wears plain labels and keeps the identifier underneath. */
+const LAB_LABELS = {
+  A_strict_single: 'One strict close',
+  B_two_closes: 'Two closes beyond',
+  C_two_closes_bodies: 'Two closes, real bodies',
+  D_two_of_three: 'Two of three',
+  E_hold_after: 'Holds after the break',
+  F_softer_single: 'One softer close',
+  G_displacement: 'Displacement',
+  H_two_candle_displacement: 'Two-candle displacement',
+  I_body_plus_displacement: 'Body plus displacement'
+};
+
+function renderLab() {
+  const host = $('#lab-board');
+  if (!host) return;
+  const rows = todayRows('lab');
+  const byVariant = new Map();
+  for (const r of rows) {
+    const key = r.strength || r.variant || '—';
+    const v = byVariant.get(key) || { n: 0, tp: 0, other: 0, both: 0, open: 0 };
+    v.n++;
+    const note = (r.note || '').toLowerCase();
+    if (note.startsWith('tp')) v.tp++;
+    else if (note.startsWith('opposite')) v.other++;
+    else if (note.startsWith('both')) v.both++;
+    else v.open++;
+    byVariant.set(key, v);
+  }
+  $('#stats-lab').innerHTML = `
+    <div class="stat"><b>${rows.length}</b><span>rows today</span></div>
+    <div class="stat"><b>${byVariant.size}</b><span>ideas</span></div>
+    <div class="stat"><b>0</b><span>messages</span></div>`;
+
+  if (!byVariant.size) {
+    host.innerHTML = `<div class="empty"><b>The lab is silent by design.</b>
+      It records every confirmation idea against an artificial ruler and never notifies.
+      Today's rows appear here once the lane has run.</div>`;
+    return;
+  }
+
+  /* A..I, so a variant keeps its place from one day to the next even when the
+     counts shuffle. */
+  const order = [...byVariant.keys()].sort((a, b) => a.localeCompare(b));
+  host.innerHTML = order.map((key) => {
+    const v = byVariant.get(key);
+    const decided = v.tp + v.other;
+    const wins = v.tp + v.both * 0.5;
+    const pct = decided ? Math.round((wins / decided) * 100) : 0;
+    const truth = decided ? `${v.tp}/${decided}` : '—';
+    const bits = [`${v.n} ${v.n === 1 ? 'row' : 'rows'}`];
+    if (v.tp) bits.push(`${v.tp} to the ruler`);
+    if (v.other) bits.push(`${v.other} the other way`);
+    if (v.both) bits.push(`${v.both} both at once`);
+    if (v.open) bits.push(`${v.open} still open`);
+    return `<div class="variant">
+      <h4>${escapeHtml(LAB_LABELS[key] || key)}</h4>
+      <div class="big">${truth}</div>
+      <div class="meta">${bits.join(' · ')}</div>
+      <div class="meter"><i style="width:${decided ? pct : 0}%"></i></div>
+      <div class="code">${escapeHtml(key)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── history ────────────────────────────────────────────────────────────────
+function historySelection() {
+  return {
+    range: $('#histRange').value || 'month',
+    month: $('#histMonth').value || store.monthKey(Date.now()),
+    day: $('#histDay').value || store.dayKey(Date.now()),
+    lane: $('#histLane').value || 'all'
+  };
+}
+
+function historyRows() {
+  return store.byNewest(store.filterByRange(state.journal, historySelection()));
+}
+
+/** Only the picker that matters for the chosen period is visible. */
+function syncRangeControls() {
+  const range = $('#histRange').value;
+  $('#cellMonth').classList.toggle('hidden', range !== 'month');
+  $('#cellDay').classList.toggle('hidden', range !== 'day');
+}
+
+function renderHistory() {
+  const body = $('#history-table tbody');
+  if (!body) return;
+
+  const monthInput = $('#histMonth');
+  if (!monthInput.value) {
+    // default to the newest month that has data, else this month
+    const months = store.monthsIn(state.journal);
+    monthInput.value = months[0] || store.monthKey(Date.now());
+  }
+  if (!$('#histDay').value) $('#histDay').value = store.dayKey(Date.now());
+
+  const sel = historySelection();
+  const rows = historyRows();
+  const win = store.rangeWindow(sel);
+  $('#histCount').textContent = rows.length;
+
+  const months = store.monthsIn(state.journal);
+  $('#stats-history').innerHTML = `
+    <div class="stat"><b>${rows.length}</b><span>in view</span></div>
+    <div class="stat"><b>${months.length}</b><span>months held</span></div>
+    <div class="stat"><b>${state.journal.length}</b><span>all time</span></div>`;
+
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="9" style="color:var(--ink-3);padding:30px">
+      Nothing in ${escapeHtml(win.label)}${sel.lane === 'all' ? '' : ' for ' + escapeHtml(sel.lane)}.</td></tr>`;
+    return;
+  }
+
+  const CAP = 1500;
+  body.innerHTML = rows.slice(0, CAP).map(r => `
+    <tr>
+      <td>${when(r.at)}</td>
+      <td><span class="lane-tag">${r.lane}</span></td>
+      <td>${r.kind}</td><td>${r.symbol || ''}</td>
+      <td class="wrap">${escapeHtml(r.pattern || '')}</td>
+      <td>${(r.direction || '').toUpperCase()}</td>
+      <td>${fmt(r.level)}</td><td>${fmt(r.entry)}</td>
+      <td class="wrap">${escapeHtml(r.strength || '')}</td>
+    </tr>`).join('') + (rows.length > CAP
+      ? `<tr><td colspan="9" style="color:var(--ink-3)">Showing the newest ${CAP} of ${rows.length}. The export contains every row, with the note.</td></tr>`
+      : '');
+}
+
+/** '20 Oct · 23:44' — the year is in the month picker, so it does not repeat. */
+function when(at) {
+  const d = new Date(at);
+  const day = d.toLocaleDateString([], { day: '2-digit', month: 'short' });
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${day} · ${time}`;
+}
+
+function renderPulse() {
+  const el = $('#pulse');
+  const txt = $('#pulseText');
+  const s = state.status;
+  el.classList.remove('live', 'err');
+  if (!s?.lastRun) { txt.textContent = 'never run'; return; }
+  if (s.lastError) { el.classList.add('err'); txt.textContent = 'error'; return; }
+  el.classList.add('live');
+  txt.textContent = 'last ' + new Date(s.lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+async function refreshStatus() {
+  state.status = await store.getStatus();
+  renderPulse();
+}
+
+// ── actions ────────────────────────────────────────────────────────────────
+async function runNow() {
+  const btn = $('#runNow');
+  btn.disabled = true;
+  btn.textContent = 'Running…';
+  try {
+    // Three places this can run: the extension's service worker (localhost),
+    // the web app (asks the server), or a test harness.
+    const res = await runSweep();
+    if (!res?.ok) throw new Error(res?.error || 'run failed');
+    await reload();
+    renderAll();
+    const s = res.summary || {};
+    if (s.requested) toast('Run requested — the sweeper picks it up on its next tick.');
+    else {
+      const unsent = s.unsent ? ` · ${s.unsent} unsent (no channel)` : '';
+      toast(`Run complete · ${s.messages || 0} messages · ${s.rows || 0} lab rows${unsent}`);
+    }
+  } catch (e) {
+    toast('Run failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run now';
+  }
+}
+
+async function runSweep() {
+  if (typeof globalThis.__ASX_RUN_NOW__ === 'function') return globalThis.__ASX_RUN_NOW__();
+  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+    return chrome.runtime.sendMessage({ type: 'run-now' });
+  }
+  throw new Error('no runner in this window');
+}
+
+async function saveSettings() {
+  const symbols = $('#symbols').value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+  const telegram = {};
+  for (const c of CHANNELS) {
+    telegram[c.key] = {
+      token: $(`#tgToken-${c.key}`).value.trim(),
+      chatId: $(`#tgChat-${c.key}`).value.trim()
+    };
+  }
+  const patch = {
+    symbols: symbols.length ? symbols : state.settings.symbols,
+    telegram,
+    lanes: {
+      scalp: $('#lane-scalp').checked,
+      i1: $('#lane-i1').checked,
+      watch: $('#lane-watch').checked,
+      lab: $('#lane-lab').checked
+    },
+    watchFrame: $('#watchFrame').value,
+    watchCloseOutBars: Number($('#closeOutBars').value) || 12,
+    sendCloseOuts: $('#sendCloseOuts').checked
+  };
+  state.settings = await store.saveSettings(patch);
+  $('#saveNote').textContent = 'Saved.';
+  setTimeout(() => ($('#saveNote').textContent = ''), 2200);
+  renderAll();
+}
+
+function fillSettings() {
+  const s = state.settings;
+  if (!s) return;
+  for (const c of CHANNELS) {
+    $(`#tgToken-${c.key}`).value = s.telegram[c.key]?.token || '';
+    $(`#tgChat-${c.key}`).value = s.telegram[c.key]?.chatId || '';
+  }
+  $('#symbols').value = s.symbols.join(', ');
+  $('#symbolChips').innerHTML = s.symbols.map(x => `<span class="chip">${x}</span>`).join('');
+  $('#lane-scalp').checked = !!s.lanes.scalp;
+  $('#lane-i1').checked = !!s.lanes.i1;
+  $('#lane-watch').checked = !!s.lanes.watch;
+  $('#lane-lab').checked = !!s.lanes.lab;
+  $('#watchFrame').value = s.watchFrame;
+  $('#closeOutBars').value = s.watchCloseOutBars;
+  $('#sendCloseOuts').checked = !!s.sendCloseOuts;
+}
+
+async function testTelegram(laneKey) {
+  const token = $(`#tgToken-${laneKey}`).value.trim();
+  const chatId = $(`#tgChat-${laneKey}`).value.trim();
+  const label = CHANNELS.find(c => c.key === laneKey)?.label || laneKey;
+  if (!token || !chatId) return toast(`Enter a token and a chat ID for ${label} first.`);
+
+  const text = `ASX Investment Tool — test message for the ${label} lane. ` +
+               'If you can read this, the channel works.';
+
+  let res;
+  if (typeof globalThis.__ASX_TEST_TELEGRAM__ === 'function') {
+    res = await globalThis.__ASX_TEST_TELEGRAM__({ token, chatId, text });
+  } else if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+    res = await chrome.runtime.sendMessage({ type: 'test-telegram', token, chatId, text });
+  } else {
+    return toast('Nothing to send a message from in this window.');
+  }
+  toast(res?.ok ? `${label} test sent.` : `Failed: ${res?.error || 'unknown'}`);
+}
+
+// ── export ─────────────────────────────────────────────────────────────────
+/** Local time with its offset, so the sheet matches the table exactly. */
+function localISO(at) {
+  const d = new Date(at);
+  const pad = n => String(n).padStart(2, '0');
+  const off = -d.getTimezoneOffset();
+  const sign = off >= 0 ? '+' : '-';
+  const abs = Math.abs(off);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+         `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` +
+         `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+}
+
+const COLUMNS = [
+  ['when_local', r => localISO(r.at)],
+  ['timestamp_ms', r => r.at],
+  ['lane', r => r.lane],
+  ['kind', r => r.kind],
+  ['symbol', r => r.symbol || ''],
+  ['pattern', r => r.pattern || ''],
+  ['direction', r => r.direction || ''],
+  ['level', r => (r.level == null ? '' : Number(r.level))],
+  ['entry', r => (r.entry == null ? '' : Number(r.entry))],
+  ['tag', r => r.strength || ''],
+  ['note', r => r.note || '']
+];
+
+function exportHistory() {
+  const sel = historySelection();
+  const { lane } = sel;
+  const rows = historyRows();
+  const win = store.rangeWindow(sel);
+  if (!rows.length) return toast(`Nothing to export for ${win.label}${lane === 'all' ? '' : ' · ' + lane}.`);
+
+  const format = $('#histFormat').value;
+  const name = `asx-history-${win.label}${lane === 'all' ? '' : '-' + lane}`;
+
+  if (format === 'json') {
+    download(`${name}.json`, JSON.stringify({
+      period: sel.range, from: localISO(win.from), to: localISO(win.to),
+      lane, count: rows.length, exportedAt: new Date().toISOString(), rows
+    }, null, 2), 'application/json');
+    return toast(`${rows.length} rows → ${name}.json`);
+  }
+
+  // Excel: one sheet of rows, one sheet that summarises them.
+  const sheet = [
+    COLUMNS.map(([h]) => h),
+    ...rows.map(r => COLUMNS.map(([, get]) => get(r)))
+  ];
+
+  const byLane = new Map();
+  for (const r of rows) {
+    const v = byLane.get(r.lane) || { rows: 0, signals: 0, wake: 0, breaks: 0, closeouts: 0 };
+    v.rows++;
+    if (r.kind === 'SIGNAL') v.signals++;
+    else if (r.kind === 'WAKE-UP') v.wake++;
+    else if (r.kind === 'BREAK') v.breaks++;
+    else if (r.kind === 'CLOSE-OUT') v.closeouts++;
+    byLane.set(r.lane, v);
+  }
+  const summary = [
+    ['period', sel.range],
+    ['window', `${localISO(win.from)} → ${localISO(win.to)}`],
+    ['lane filter', lane],
+    ['rows', rows.length],
+    ['exported', new Date().toISOString()],
+    [],
+    ['lane', 'rows', 'signals', 'wake-ups', 'breaks', 'close-outs'],
+    ...[...byLane.entries()].map(([k, v]) =>
+      [k, v.rows, v.signals, v.wake, v.breaks, v.closeouts])
+  ];
+
+  try {
+    const bytes = buildXlsx([
+      { name: `${win.label} ${lane}`, rows: sheet },
+      { name: 'Summary', rows: summary }
+    ]);
+    download(`${name}.xlsx`, bytes, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    toast(`${rows.length} rows → ${name}.xlsx`);
+  } catch (e) {
+    toast('Excel export failed: ' + e.message);
+  }
+}
+
+async function clearHistory() {
+  if (!confirm('Delete every row in the journal? The export you may want should be taken first.')) return;
+  await store.clearJournal();
+  state.journal = [];
+  renderAll();
+  toast('History cleared.');
+}
+
+// ── utils ──────────────────────────────────────────────────────────────────
+function fmt(v) {
+  if (v == null || v === '') return '—';
+  const n = Number(v);
+  if (!isFinite(n)) return String(v);
+  const dec = Math.abs(n) >= 1000 ? 2 : Math.abs(n) >= 10 ? 2 : 4;
+  return n.toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function download(name, data, mime) {
+  try {
+    const blob = new Blob([data], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch {
+    toast('Download blocked in this window — open the extension tab instead.');
+  }
+}
+let toastTimer;
+function toast(msg) {
+  let el = document.querySelector('.toast');
+  if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('on'), 3200);
+}
+
+// The web app polls the sweep job and hands the fresh rows back here.
+globalThis.__ASX_REFRESH__ = async (journal, status) => {
+  state.journal = journal || await store.getJournal();
+  state.status = status || await store.getStatus();
+  renderAll();
+};
+
+boot();
+
+
+</script>
+</body>
+</html>

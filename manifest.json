@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "ASX Investment Tool",
+  "version": "2.0.1",
+  "description": "Three signal lanes \u2014 scalp, intraday and watch \u2014 plus a silent measurement lab. No charts, no indicators, no targets. Levels, breaks and wake-ups only.",
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://data-api.binance.vision/*",
+    "https://api.binance.com/*",
+    "https://api.telegram.org/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Open ASX Investment Tool",
+    "default_icon": {
+      "16": "src/assets/icon16.png",
+      "48": "src/assets/icon48.png",
+      "128": "src/assets/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "src/assets/icon16.png",
+    "48": "src/assets/icon48.png",
+    "128": "src/assets/icon128.png"
+  }
+}

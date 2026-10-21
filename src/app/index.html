@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASX Investment Tool</title>
+<link rel="stylesheet" href="app.css">
+<link rel="icon" href="../assets/icon48.png">
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── rail ─────────────────────────────────────────────── -->
+  <aside class="rail">
+    <div class="brand">
+      <div class="mark"><img src="../assets/icon48.png" alt="ASX"></div>
+      <div class="brand-txt"><b>ASX</b><span>investment tool</span></div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item" data-view="scalp"><i>S</i><span>Scalp</span></button>
+      <button class="nav-item" data-view="intraday"><i>I</i><span>Intraday</span></button>
+      <button class="nav-item" data-view="watch"><i>W</i><span>Watch</span></button>
+      <button class="nav-item" data-view="lab"><i>L</i><span>Lab</span></button>
+      <div class="nav-sep"></div>
+      <button class="nav-item" data-view="history"><i>H</i><span>History</span></button>
+      <button class="nav-item" data-view="settings"><i>⚙</i><span>Settings</span></button>
+    </nav>
+
+    <div class="rail-foot">
+      <div class="pulse" id="pulse"><span></span><em id="pulseText">idle</em></div>
+      <button class="run-btn" id="runNow">Run now</button>
+    </div>
+  </aside>
+
+  <!-- ── main ─────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- SCALP -->
+    <section class="view" id="view-scalp">
+      <header class="vhead">
+        <div>
+          <h1>Scalp</h1>
+          <p class="sub">Two frames. One level. Every break prints. Today only — older rows are in History.</p>
+        </div>
+        <div class="vstats" id="stats-scalp"></div>
+      </header>
+      <div class="feed" id="feed-scalp"></div>
+    </section>
+
+    <!-- INTRADAY -->
+    <section class="view" id="view-intraday">
+      <header class="vhead">
+        <div>
+          <h1>Intraday</h1>
+          <p class="sub">1h finds the shape and the level. 15m decides whether you hear about it. Today only.</p>
+        </div>
+        <div class="vstats" id="stats-intraday"></div>
+      </header>
+      <div class="feed" id="feed-intraday"></div>
+    </section>
+
+    <!-- WATCH -->
+    <section class="view" id="view-watch">
+      <header class="vhead">
+        <div>
+          <h1>Watch</h1>
+          <p class="sub">Wake-ups, not confirmations. The structure tells you early; the entry is yours. Today only.</p>
+        </div>
+        <div class="vstats" id="stats-watch"></div>
+      </header>
+      <div class="feed" id="feed-watch"></div>
+    </section>
+
+    <!-- LAB -->
+    <section class="view" id="view-lab">
+      <header class="vhead">
+        <div>
+          <h1>Lab</h1>
+          <p class="sub">Nine confirmation ideas, scored silently against an artificial ruler. Nothing here notifies. Today only.</p>
+        </div>
+        <div class="vstats" id="stats-lab"></div>
+      </header>
+      <div class="board" id="lab-board"></div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="view" id="view-history">
+      <header class="vhead">
+        <div>
+          <h1>History</h1>
+          <p class="sub">Everything every lane has ever written. Pick a period, pick a lane, take it out as JSON or Excel.</p>
+        </div>
+        <div class="vstats" id="stats-history"></div>
+      </header>
+
+      <div class="toolbar">
+        <label class="cell"><span>Period</span>
+          <select id="histRange">
+            <option value="month">A month</option>
+            <option value="day">One day</option>
+            <option value="d3">Last 3 days</option>
+            <option value="d7">Last 7 days</option>
+            <option value="d14">Last 14 days</option>
+          </select>
+        </label>
+        <label class="cell" id="cellMonth"><span>Month</span>
+          <input id="histMonth" type="month">
+        </label>
+        <label class="cell hidden" id="cellDay"><span>Day</span>
+          <input id="histDay" type="date">
+        </label>
+        <label class="cell"><span>Lane</span>
+          <select id="histLane">
+            <option value="all">All lanes</option>
+            <option value="scalp">Scalp</option>
+            <option value="intraday">Intraday</option>
+            <option value="watch">Watch</option>
+            <option value="lab">Lab</option>
+          </select>
+        </label>
+        <label class="cell"><span>Export format</span>
+          <select id="histFormat">
+            <option value="xlsx">Excel (.xlsx)</option>
+            <option value="json">JSON (.json)</option>
+          </select>
+        </label>
+        <button class="ghost" id="exportHistory">Export period</button>
+        <button class="ghost danger" id="clearHistory">Clear all</button>
+        <div class="hist-count"><b id="histCount">0</b>rows in view</div>
+      </div>
+
+      <div class="tablewrap"><table class="table" id="history-table">
+        <colgroup>
+          <col style="width:112px"><col style="width:84px"><col style="width:92px">
+          <col style="width:92px"><col style="width:160px"><col style="width:70px">
+          <col style="width:100px"><col style="width:100px"><col style="width:150px">
+        </colgroup>
+        <thead><tr>
+          <th>When</th><th>Lane</th><th>Kind</th><th>Symbol</th><th>Pattern</th>
+          <th>Dir</th><th>Level</th><th>Entry</th><th>Tag</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <header class="vhead">
+        <div>
+          <h1>Settings</h1>
+          <p class="sub">Three lanes that talk, so three channels. Each one has its own bot and its own chat.</p>
+        </div>
+      </header>
+
+      <div class="settings-grid">
+
+        <div class="panel">
+          <h3><span class="lane-dot"></span>Scalp channel</h3>
+          <label class="field"><span>Bot token</span>
+            <input id="tgToken-scalp" type="password" placeholder="123456:ABC-DEF…" autocomplete="off">
+          </label>
+          <label class="field"><span>Chat ID</span>
+            <input id="tgChat-scalp" type="text" placeholder="-1001234567890" autocomplete="off">
+          </label>
+          <button class="ghost test-tg" data-lane="scalp">Send a test message</button>
+        </div>
+
+        <div class="panel">
+          <h3><span class="lane-dot"></span>Intraday channel</h3>
+          <label class="field"><span>Bot token</span>
+            <input id="tgToken-i1" type="password" placeholder="123456:ABC-DEF…" autocomplete="off">
+          </label>
+          <label class="field"><span>Chat ID</span>
+            <input id="tgChat-i1" type="text" placeholder="-1001234567890" autocomplete="off">
+          </label>
+          <button class="ghost test-tg" data-lane="i1">Send a test message</button>
+        </div>
+
+        <div class="panel">
+          <h3><span class="lane-dot"></span>Watch channel</h3>
+          <label class="field"><span>Bot token</span>
+            <input id="tgToken-watch" type="password" placeholder="123456:ABC-DEF…" autocomplete="off">
+          </label>
+          <label class="field"><span>Chat ID</span>
+            <input id="tgChat-watch" type="text" placeholder="-1001234567890" autocomplete="off">
+          </label>
+          <button class="ghost test-tg" data-lane="watch">Send a test message</button>
+        </div>
+
+        <div class="panel">
+          <h3><span class="lane-dot"></span>Lab channel</h3>
+          <p class="hint">There isn't one. The lab records rows and never sends a message — that is the whole point of it. Its rows still land in History.</p>
+        </div>
+
+        <div class="panel">
+          <h3>Symbols</h3>
+          <p class="hint">Binance pairs, comma separated. Every lane scales with this list.</p>
+          <input id="symbols" type="text" placeholder="BTCUSDT, ETHUSDT, SOLUSDT">
+          <div class="chips" id="symbolChips"></div>
+        </div>
+
+        <div class="panel">
+          <h3>Lanes</h3>
+          <label class="switch"><input type="checkbox" id="lane-scalp"><span>Scalp · 5m→1m and 15m→5m</span></label>
+          <label class="switch"><input type="checkbox" id="lane-i1"><span>Intraday · 1h→15m</span></label>
+          <label class="switch"><input type="checkbox" id="lane-watch"><span>Watch · wake-ups and close-outs</span></label>
+          <label class="switch"><input type="checkbox" id="lane-lab"><span>Lab · records only, never notifies</span></label>
+        </div>
+
+        <div class="panel">
+          <h3>Watch lane</h3>
+          <label class="field"><span>Frame</span>
+            <select id="watchFrame">
+              <option value="1h">1h — about 1.19 messages a day</option>
+              <option value="4h">4h — about 0.38 messages a day</option>
+            </select>
+          </label>
+          <label class="field"><span>Close-out backstop (bars)</span>
+            <input id="closeOutBars" type="number" min="4" max="60" step="1">
+          </label>
+          <label class="switch"><input type="checkbox" id="sendCloseOuts"><span>Send close-out messages</span></label>
+        </div>
+
+        <div class="panel wide">
+          <h3>What this tool will never do</h3>
+          <ul class="never">
+            <li>Place, size, or manage a trade</li>
+            <li>Draw a chart or an indicator</li>
+            <li>Send a stop, a target, or an expiry</li>
+            <li>Gate a signal on volume, spread, session or strength</li>
+            <li>Let one lane read another lane's state</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="savebar">
+        <span id="saveNote"></span>
+        <button class="primary" id="saveSettings">Save settings</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

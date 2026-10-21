@@ -1,0 +1,62 @@
+/* ============================================================================
+   site.css — only what the web app adds on top of the shared app.css:
+   the sign-in gate and the small session bar.
+   ========================================================================== */
+
+.gate{
+  position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:24px;
+  background:
+    radial-gradient(700px 420px at 50% -10%, rgba(59,130,246,.20), transparent 65%),
+    var(--void);
+  transition:opacity .18s;
+}
+.gate.gone{opacity:0;pointer-events:none}
+
+.gate-card{
+  width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line-2);
+  border-radius:14px;padding:26px 24px;box-shadow:0 30px 80px rgba(0,0,0,.6);
+}
+.gate-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.gate-brand img{border-radius:10px;display:block}
+.gate-brand div{display:flex;flex-direction:column;line-height:1.15}
+.gate-brand b{font-size:16px;letter-spacing:.02em}
+.gate-brand span{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+
+.gate-card h2{margin:0 0 6px;font-size:26px;letter-spacing:-.03em;font-weight:800}
+.gate-sub{margin:0 0 22px;font-size:12.5px;color:var(--ink-2)}
+
+.gate-field{display:block;margin-bottom:12px}
+.gate-field span{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+                 color:var(--ink-3);margin-bottom:6px}
+.gate-field input{width:100%;padding:12px;font-size:14px}
+
+.gate-error{font-size:12px;color:var(--short);min-height:16px;margin:2px 0 10px;opacity:0;transition:.15s}
+.gate-error.on{opacity:1}
+
+.gate-go{
+  width:100%;padding:13px;border-radius:9px;font-weight:800;font-size:14px;color:#fff;
+  background:linear-gradient(160deg,var(--blue-light),var(--blue) 55%,var(--blue-deep));
+  box-shadow:0 6px 20px rgba(29,78,216,.4);transition:filter .12s;
+}
+.gate-go:hover{filter:brightness(1.08)}
+.gate-go:disabled{opacity:.5;cursor:progress}
+
+.gate-note{margin:14px 0 0;font-size:11px;color:var(--ink-3);text-align:center}
+
+.site-bar{
+  position:fixed;right:16px;bottom:16px;z-index:60;display:flex;align-items:center;gap:10px;
+  background:var(--panel);border:1px solid var(--line-2);border-radius:20px;
+  padding:7px 8px 7px 14px;font-size:11.5px;color:var(--ink-2);
+  box-shadow:0 10px 30px rgba(0,0,0,.45);
+}
+.site-bar button{
+  border:1px solid var(--line-2);border-radius:14px;padding:5px 11px;font-size:11px;
+  font-weight:700;color:var(--ink-2);transition:.12s;
+}
+.site-bar button:hover{border-color:var(--short);color:var(--short)}
+
+@media(max-width:760px){
+  .site-bar{left:10px;right:10px;bottom:10px;justify-content:space-between}
+  .gate-card{padding:22px 18px}
+  .gate{place-items:start center;padding:32px 14px}
+}

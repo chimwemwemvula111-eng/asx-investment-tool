@@ -1,0 +1,16 @@
+{
+  "name": "asx-investment-tool",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Chrome MV3 extension. Not an npm package \u2014 this file only tells node the .js files are ES modules so the tests run without a warning.",
+  "scripts": {
+    "test": "node tests/runner.test.js && node tests/supabase.test.js && node tests/site.test.js && node src/lanes/i1.test.js && node src/lanes/watch.test.js && node src/lanes/lab.test.js && node src/scalp/scalp-core.test.js && node src/scalp/scalp-scanner.test.js",
+    "preview": "node tools/build-preview.mjs",
+    "site": "node tools/build-site.mjs",
+    "sweep": "node scripts/sweep.mjs",
+    "test:schema": "bash scripts/test-schema.sh",
+    "test:all": "npm test && npm run test:schema",
+    "serve": "node tools/serve-local.mjs"
+  }
+}
